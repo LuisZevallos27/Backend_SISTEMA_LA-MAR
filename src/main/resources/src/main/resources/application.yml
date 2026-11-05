@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: lamar-backend
+  datasource:
+    url: jdbc:sqlserver://localhost:1433;databaseName=LaMarDB;encrypt=true;trustServerCertificate=true
+    username: ${DB_USER:lamar_app}
+    password: ${DB_PASSWORD}
+    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: none
+    show-sql: true
+
+server:
+  port: 8080
+  error:
+    include-message: always
+app:
+  jwt:
+    secret: ${JWT_SECRET}
+    expiration-minutes: 480
