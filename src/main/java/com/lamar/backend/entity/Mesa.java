@@ -17,13 +17,15 @@ public class Mesa {
 
     @Column(name = "numero_mesa", nullable = false)
     private Integer numero;
-
+    
+    @Column(name = "zona_mesa", nullable = false, length = 20)
+    private String zona;
+    
     @Column(nullable = false)
     private Integer capacidad;
 
     @Column(nullable = false, length = 20)
     private String estado;
 
-    @Column(nullable = false, length = 20)
-    private String zona;
+    
 }

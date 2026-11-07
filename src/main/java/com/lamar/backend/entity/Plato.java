@@ -22,7 +22,7 @@ public class Plato {
     @Column(length = 40)
     private String categoria;
 
-    @Column(nullable = false, precision = 10, scale = 2)
+    @Column(name = "precio_plato", nullable = false, precision = 10, scale = 2)
     private BigDecimal precio;
 
     @Column(length = 200)

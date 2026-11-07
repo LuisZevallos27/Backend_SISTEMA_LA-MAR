@@ -35,6 +35,6 @@ public class Empleado {
     @Column(nullable = false, length = 20)
     private String turno;
 
-    @Column(name = "password_hash", length = 100)
+    @Column(name = "password_empleado", length = 100)
     private String passwordHash;
 }
