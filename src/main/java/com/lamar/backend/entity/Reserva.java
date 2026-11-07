@@ -2,6 +2,7 @@ package com.lamar.backend.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -29,6 +30,9 @@ public class Reserva {
 
     @Column(name = "fecha_reserva")
     private LocalDate fecha;
+
+    @Column(name = "hora_reserva")
+    private LocalTime hora;
 
     @Column(name = "cant_personas")
     private Integer cantidadPersonas;

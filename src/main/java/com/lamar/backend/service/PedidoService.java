@@ -7,6 +7,7 @@ import com.lamar.backend.repository.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,7 @@ public class PedidoService {
     private final EmpleadoRepository empleadoRepository;
     private final ClienteRepository clienteRepository;
     private final PlatoRepository platoRepository;
+    private final ReservaRepository reservaRepository;
 
     @Transactional
     public PedidoDto abrir(Integer idEmpleado, PedidoRequests.Abrir req) {
@@ -51,6 +53,15 @@ public class PedidoService {
         if (req.dniCliente() != null && !req.dniCliente().isBlank()) {
             p.setCliente(buscarCliente(req.dniCliente()));
         }
+        reservaRepository.findFirstByMesaIdAndFechaAndEstadoInOrderByHoraAsc(
+                mesa.getId(), LocalDate.now(), List.of("Pendiente", "Confirmada"))
+                .ifPresent(r -> {
+                    r.setEstado("Atendida");
+                    if (p.getCliente() == null) {
+                        p.setCliente(r.getCliente());
+                    }
+                });
+
         mesa.setEstado("Ocupado");
         pedidoRepository.save(p);
         return toDto(p);
