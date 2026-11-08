@@ -1,0 +1,16 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "LaMar Backend",
+      "request": "launch",
+      "mainClass": "com.lamar.backend.BackendApplication",
+      "env": {
+        "DB_USER": "lamar_app",
+        "DB_PASSWORD": "PON_AQUI_TU_PASSWORD",
+        "JWT_SECRET": "PON_AQUI_UN_SECRETO_ALEATORIO_DE_MAS_DE_32_CARACTERES"
+      }
+    }
+  ]
+}

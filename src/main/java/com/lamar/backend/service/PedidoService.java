@@ -7,7 +7,9 @@ import com.lamar.backend.repository.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.LocalDate;
+import java.time.Duration;
 import java.util.Comparator;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +26,7 @@ public class PedidoService {
     private static final String ABIERTO = "Abierto";
     private static final String CERRADO = "Cerrado";
     private static final String ANULADO = "Anulado";
+    private static final List<String> RESERVAS_ACTIVAS = List.of("Pendiente", "Confirmada");
 
     private final PedidoRepository pedidoRepository;
     private final MesaRepository mesaRepository;
@@ -53,8 +56,19 @@ public class PedidoService {
         if (req.dniCliente() != null && !req.dniCliente().isBlank()) {
             p.setCliente(buscarCliente(req.dniCliente()));
         }
-        reservaRepository.findFirstByMesaIdAndFechaAndEstadoInOrderByHoraAsc(
-                mesa.getId(), LocalDate.now(), List.of("Pendiente", "Confirmada"))
+        // Si la mesa tiene una reserva activa de hoy y el pedido se abre entre 30
+        // minutos antes
+        // y 2 horas despues de su hora, se marca atendida y se toma su cliente
+                LocalTime ahora = LocalTime.now();
+        reservaRepository.findByMesaIdAndFechaAndEstadoIn(mesa.getId(), LocalDate.now(), RESERVAS_ACTIVAS)
+                .stream()
+                .filter(r -> {
+                    if (r.getHora() == null) return true;
+                    // minutos hasta la reserva (negativo si ya paso su hora)
+                    long min = Duration.between(ahora, r.getHora()).toMinutes();
+                    return min <= 30 && min >= -120;
+                })
+                .min(Comparator.comparing(Reserva::getHora, Comparator.nullsFirst(Comparator.naturalOrder())))
                 .ifPresent(r -> {
                     r.setEstado("Atendida");
                     if (p.getCliente() == null) {
@@ -148,7 +162,7 @@ public class PedidoService {
         }
         recalcular(p);
         p.setEstadoPedido(CERRADO);
-        p.getMesa().setEstado("Disponible");
+        liberarMesa(p.getMesa());
         return toDto(p);
     }
 
@@ -156,7 +170,7 @@ public class PedidoService {
     public PedidoDto anular(Integer idPedido) {
         Pedido p = pedidoAbierto(idPedido);
         p.setEstadoPedido(ANULADO);
-        p.getMesa().setEstado("Disponible");
+        liberarMesa(p.getMesa());
         return toDto(p);
     }
 
@@ -213,5 +227,19 @@ public class PedidoService {
 
     private ResponseStatusException error(HttpStatus status, String mensaje) {
         return new ResponseStatusException(status, mensaje);
+    }
+
+    /**
+     * Al liberar una mesa: queda Reservado si aun tiene una reserva vigente hoy; si
+     * no, Disponible.
+     */
+    private void liberarMesa(Mesa mesa) {
+        LocalTime ahora = LocalTime.now();
+        boolean reservaVigente = reservaRepository
+                .findByMesaIdAndFechaAndEstadoIn(mesa.getId(), LocalDate.now(), RESERVAS_ACTIVAS)
+                .stream()
+                .anyMatch(r -> r.getHora() == null
+                        || Duration.between(ahora, r.getHora()).toMinutes() > -120);
+        mesa.setEstado(reservaVigente ? "Reservado" : "Disponible");
     }
 }
