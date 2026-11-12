@@ -1,0 +1,355 @@
+﻿-- =====================================================================
+-- PROYECTO FINAL BASE DE DATOS II - GRUPO 02 - LA MAR CEVICHERIA
+-- Parte relacional (SQL Server) - Modelo 3FN
+-- Version con roles de empleado (Mozo, Recepcionista, Administrador),
+-- Reserva.hora_reserva y Abastecimiento.estado.
+-- ATENCION: este script ELIMINA y vuelve a crear la base LaMarDB.
+-- Detener el backend antes de ejecutarlo y reiniciarlo despues.
+-- =====================================================================
+
+USE master;
+GO
+
+-- Login de la aplicacion (nivel servidor).
+-- Si no existe se crea; si ya existe se le fija esta misma contrasena y se habilita.
+-- IMPORTANTE: esta contrasena debe ser la misma que DB_PASSWORD en .vscode/launch.json
+IF NOT EXISTS (SELECT 1 FROM sys.server_principals WHERE name = 'lamar_app')
+    CREATE LOGIN lamar_app WITH PASSWORD = 'CambiaEsto#2026', CHECK_POLICY = OFF;
+ELSE
+    ALTER LOGIN lamar_app WITH PASSWORD = 'CambiaEsto#2026', CHECK_POLICY = OFF;
+GO
+
+ALTER LOGIN lamar_app ENABLE;
+GO
+
+IF DB_ID('LaMarDB') IS NOT NULL
+BEGIN
+    ALTER DATABASE LaMarDB SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+    DROP DATABASE LaMarDB;
+END
+GO
+
+CREATE DATABASE LaMarDB;
+GO
+
+USE LaMarDB;
+GO
+
+-- ---------------------------------------------------------------------
+-- 1. TABLAS MAESTRAS
+-- ---------------------------------------------------------------------
+
+CREATE TABLE Cliente (
+    id_cliente        INT IDENTITY(1,1) PRIMARY KEY,
+    dni_cliente       VARCHAR(11) NOT NULL,
+    nombres_cliente   VARCHAR(60) NOT NULL,
+    apellidos_cliente VARCHAR(60) NOT NULL,
+    telefono_cliente  VARCHAR(15),
+    correo_cliente    VARCHAR(80)
+);
+GO
+
+CREATE TABLE Mesa (
+    id_mesa      INT IDENTITY(1,1) PRIMARY KEY,
+    numero_mesa  INT NOT NULL,
+    zona_mesa    VARCHAR(20) NOT NULL,
+    capacidad    INT NOT NULL,
+    estado       VARCHAR(20) NOT NULL,
+    CONSTRAINT UQ_Mesa_numero UNIQUE (numero_mesa),
+    CONSTRAINT CK_Mesa_zona   CHECK (zona_mesa IN ('Piso 1', 'Piso 2', 'VIP')),
+    CONSTRAINT CK_Mesa_estado CHECK (estado IN ('Disponible', 'Reservado', 'Ocupado'))
+);
+GO
+
+-- password_empleado guarda el HASH BCrypt (nunca la contrasena en texto plano).
+-- Queda NULL en los datos de prueba; el backend (DataInitializer) la completa.
+CREATE TABLE Empleado (
+    id_empleado        INT IDENTITY(1,1) PRIMARY KEY,
+    dni_empleado       CHAR(8) NOT NULL,
+    password_empleado  VARCHAR(100),
+    nombres_empleado   VARCHAR(60) NOT NULL,
+    apellidos_empleado VARCHAR(60) NOT NULL,
+    cargo              VARCHAR(40) NOT NULL,
+    turno              VARCHAR(20) NOT NULL,
+    CONSTRAINT UQ_Empleado_dni UNIQUE (dni_empleado),
+    CONSTRAINT CK_Empleado_cargo CHECK (cargo IN ('Mozo', 'Recepcionista', 'Administrador'))
+);
+GO
+
+CREATE TABLE Proveedor (
+    id_proveedor       INT IDENTITY(1,1) PRIMARY KEY,
+    ruc_proveedor      CHAR(11) NOT NULL,
+    prov_razon_social  VARCHAR(100) NOT NULL,
+    telefono_proveedor VARCHAR(15),
+    CONSTRAINT UQ_Proveedor_ruc UNIQUE (ruc_proveedor)
+);
+GO
+
+CREATE TABLE Plato (
+    id_plato     INT IDENTITY(1,1) PRIMARY KEY,
+    nombre_plato VARCHAR(80) NOT NULL,
+    categoria    VARCHAR(40),
+    precio_plato DECIMAL(10,2) NOT NULL,
+    descripcion  VARCHAR(200),
+    imagen_url   VARCHAR(255),
+    CONSTRAINT CK_Plato_precio CHECK (precio_plato >= 0)
+);
+GO
+
+CREATE TABLE Insumo (
+    id_insumo     INT IDENTITY(1,1) PRIMARY KEY,
+    nombre_insumo VARCHAR(80) NOT NULL,
+    unidad_medida VARCHAR(15) NOT NULL
+);
+GO
+
+-- ---------------------------------------------------------------------
+-- 2. TABLAS TRANSACCIONALES
+-- ---------------------------------------------------------------------
+
+CREATE TABLE Reserva (
+    id_reserva    INT IDENTITY(1,1) PRIMARY KEY,
+    id_cliente    INT NOT NULL,
+    id_mesa       INT NOT NULL,
+    canal_reserva VARCHAR(20),
+    fecha_reserva DATE,
+    hora_reserva  TIME,                 -- obligatoria desde la API
+    cant_personas INT,
+    estado        VARCHAR(20),
+    CONSTRAINT FK_Reserva_Cliente FOREIGN KEY (id_cliente) REFERENCES Cliente(id_cliente),
+    CONSTRAINT FK_Reserva_Mesa    FOREIGN KEY (id_mesa)    REFERENCES Mesa(id_mesa),
+    CONSTRAINT CK_Reserva_estado  CHECK (estado IN ('Pendiente', 'Confirmada', 'Cancelada', 'Atendida'))
+);
+GO
+
+CREATE TABLE Pedido (
+    id_pedido        INT IDENTITY(1,1) PRIMARY KEY,
+    id_cliente       INT NULL,          -- NULL = cliente no registrado
+    id_mesa          INT NOT NULL,
+    id_empleado      INT NOT NULL,
+    fecha_hora       DATETIME,
+    tipo_comprobante VARCHAR(15),
+    monto_total      DECIMAL(10,2),     -- base imponible + IGV (sin propina)
+    estado_pedido    VARCHAR(20),
+    CONSTRAINT FK_Pedido_Cliente  FOREIGN KEY (id_cliente)  REFERENCES Cliente(id_cliente),
+    CONSTRAINT FK_Pedido_Mesa     FOREIGN KEY (id_mesa)     REFERENCES Mesa(id_mesa),
+    CONSTRAINT FK_Pedido_Empleado FOREIGN KEY (id_empleado) REFERENCES Empleado(id_empleado),
+    CONSTRAINT CK_Pedido_estado   CHECK (estado_pedido IN ('Abierto', 'Cerrado', 'Anulado')),
+    CONSTRAINT CK_Pedido_comprob  CHECK (tipo_comprobante IN ('Boleta', 'Factura'))
+);
+GO
+
+CREATE TABLE Abastecimiento (
+    id_abastecimiento INT IDENTITY(1,1) PRIMARY KEY,
+    id_proveedor      INT NOT NULL,
+    fecha             DATETIME,
+    estado            VARCHAR(20) NOT NULL CONSTRAINT DF_Abast_estado DEFAULT 'Pendiente',
+    CONSTRAINT FK_Abast_Proveedor FOREIGN KEY (id_proveedor) REFERENCES Proveedor(id_proveedor),
+    CONSTRAINT CK_Abast_estado    CHECK (estado IN ('Pendiente', 'Recibido', 'Anulado'))
+);
+GO
+
+-- ---------------------------------------------------------------------
+-- 3. TABLAS INTERMEDIAS
+-- ---------------------------------------------------------------------
+
+CREATE TABLE Detalle_Pedido (
+    id_pedido INT NOT NULL,
+    id_plato  INT NOT NULL,
+    cantidad  INT NOT NULL,
+    subtotal  DECIMAL(10,2),
+    CONSTRAINT PK_Detalle_Pedido PRIMARY KEY (id_pedido, id_plato),
+    CONSTRAINT FK_DetPed_Pedido  FOREIGN KEY (id_pedido) REFERENCES Pedido(id_pedido),
+    CONSTRAINT FK_DetPed_Plato   FOREIGN KEY (id_plato)  REFERENCES Plato(id_plato),
+    CONSTRAINT CK_DetPed_cant    CHECK (cantidad > 0)
+);
+GO
+
+CREATE TABLE Receta_Insumo (
+    id_plato       INT NOT NULL,
+    id_insumo      INT NOT NULL,
+    cantidad_usada DECIMAL(8,3) NOT NULL,
+    CONSTRAINT PK_Receta_Insumo PRIMARY KEY (id_plato, id_insumo),
+    CONSTRAINT FK_Receta_Plato  FOREIGN KEY (id_plato)  REFERENCES Plato(id_plato),
+    CONSTRAINT FK_Receta_Insumo FOREIGN KEY (id_insumo) REFERENCES Insumo(id_insumo)
+);
+GO
+
+CREATE TABLE Detalle_Abastecimiento (
+    id_abastecimiento INT NOT NULL,
+    id_insumo         INT NOT NULL,
+    cantidad          DECIMAL(10,2) NOT NULL,
+    costo_total       DECIMAL(10,2) NOT NULL,
+    CONSTRAINT PK_Detalle_Abast PRIMARY KEY (id_abastecimiento, id_insumo),
+    CONSTRAINT FK_DetAbast_Abast  FOREIGN KEY (id_abastecimiento) REFERENCES Abastecimiento(id_abastecimiento),
+    CONSTRAINT FK_DetAbast_Insumo FOREIGN KEY (id_insumo)         REFERENCES Insumo(id_insumo)
+);
+GO
+
+-- =====================================================================
+-- DATOS DE PRUEBA
+-- (se asume base recien creada: los IDs autoincrementales parten en 1)
+-- =====================================================================
+
+-- Mesas: Piso 1 (1-6), Piso 2 (7-10), VIP (11-12)
+INSERT INTO Mesa (numero_mesa, zona_mesa, capacidad, estado) VALUES
+(1,  'Piso 1', 2, 'Disponible'),
+(2,  'Piso 1', 2, 'Disponible'),
+(3,  'Piso 1', 4, 'Reservado'),
+(4,  'Piso 1', 4, 'Ocupado'),
+(5,  'Piso 1', 6, 'Disponible'),
+(6,  'Piso 1', 4, 'Ocupado'),
+(7,  'Piso 2', 4, 'Disponible'),
+(8,  'Piso 2', 4, 'Disponible'),
+(9,  'Piso 2', 6, 'Disponible'),
+(10, 'Piso 2', 8, 'Disponible'),
+(11, 'VIP',    6, 'Disponible'),
+(12, 'VIP',    10,'Disponible');
+GO
+
+-- Empleados: 2 mozos, 1 recepcionista, 1 administrador
+-- (password_empleado se completa desde el backend: contrasena inicial = DNI)
+INSERT INTO Empleado (dni_empleado, nombres_empleado, apellidos_empleado, cargo, turno) VALUES
+('70123456', 'Carlos', 'Ramos Quispe',    'Mozo',          'Tarde'),
+('71234567', 'Lucía',  'Paredes Rojas',   'Recepcionista', 'Tarde'),
+('72345678', 'Jorge',  'Salazar Medina',  'Administrador', 'Noche'),
+('73456789', 'Marta',  'Huamán Flores',   'Mozo',          'Noche');
+GO
+
+-- Clientes
+INSERT INTO Cliente (dni_cliente, nombres_cliente, apellidos_cliente, telefono_cliente, correo_cliente) VALUES
+('72845531', 'Anghelo', 'Lopez Castilla',  '987654321', 'anghelo.lopez@correo.com'),
+('45678912', 'María',   'Torres Vega',     '956123478', 'maria.torres@correo.com'),
+('40123987', 'Ricardo', 'Gamarra Diaz',    '944332211', NULL),
+('70998877', 'Sofía',   'Mendoza Luna',    '933221100', 'sofia.mendoza@correo.com');
+GO
+
+-- Platos (precios SIN IGV; el IGV 18% se calcula en la pre-cuenta)
+INSERT INTO Plato (nombre_plato, categoria, precio_plato, descripcion, imagen_url) VALUES
+('Cebiche Mixto',        'Cebiches',   86.00, 'Pescado de temporada, pulpo y langostinos',        '/img/platos/cebiche-mixto.jpg'),
+('Cebiche Criollo',      'Cebiches',   89.00, 'Pescado de temporada y chicharrón de pulpo',       '/img/platos/cebiche-criollo.jpg'),
+('Cebiche Tumbes',       'Cebiches',   69.00, 'El clásico de conchas negras',                     '/img/platos/cebiche-tumbes.jpg'),
+('Cebiche Nikkei',       'Cebiches',   89.00, 'En leche de tigre nikkei oriental. Atún',          '/img/platos/cebiche-nikkei.jpg'),
+('Tiradito Bachiche',    'Tiraditos',  79.00, 'Pescado fresco en finas láminas con crema de ají', '/img/platos/tiradito-bachiche.jpg'),
+('Causa Limeña',         'Causas',     90.00, 'Causa de ají amarillo rellena de langostinos',     '/img/platos/causa-limena.jpg'),
+('Anticuchos de Pollo',  'Anticuchos', 26.00, 'Brochetas de pollo marinadas con ají panca',       '/img/platos/anticuchos-pollo.jpg'),
+('Suspiro a la Limeña',  'Postres',    27.00, 'Manjar blanco con merengue de oporto',             '/img/platos/suspiro-limena.jpg'),
+('Chicha Morada (jarra)','Bebidas',    18.00, 'Jarra de chicha morada de la casa',                '/img/platos/chicha-morada.jpg'),
+('Limonada Frozen',      'Bebidas',    16.00, 'Limonada helada con hierbabuena',                  '/img/platos/limonada-frozen.jpg'),
+('Pisco Sour',           'Bebidas',    32.00, 'Cóctel clásico de pisco quebranta',              '/img/platos/pisco-sour.jpg');
+GO
+
+-- Proveedores
+INSERT INTO Proveedor (ruc_proveedor, prov_razon_social, telefono_proveedor) VALUES
+('20512345678', 'Pesquera Mar Azul S.A.C.',        '014561234'),
+('20498765432', 'Distribuidora Costa Verde E.I.R.L.', '014329876'),
+('20601234567', 'Agroinsumos del Sur S.A.C.',      '015547788');
+GO
+
+-- Insumos
+INSERT INTO Insumo (nombre_insumo, unidad_medida) VALUES
+('Pescado fresco (corvina)', 'kg'),     -- 1
+('Pulpo',                    'kg'),     -- 2
+('Langostinos',              'kg'),     -- 3
+('Conchas negras',           'unidad'), -- 4
+('Limón',                    'kg'),     -- 5
+('Cebolla roja',             'kg'),     -- 6
+('Ají limo',                 'kg'),     -- 7
+('Camote',                   'kg'),     -- 8
+('Choclo',                   'unidad'), -- 9
+('Atún',                     'kg'),     -- 10
+('Pollo',                    'kg'),     -- 11
+('Pisco quebranta',          'litro');  -- 12
+GO
+
+-- Recetas (cantidad por porcion)
+INSERT INTO Receta_Insumo (id_plato, id_insumo, cantidad_usada) VALUES
+(1, 1, 0.200), (1, 2, 0.080), (1, 3, 0.080), (1, 5, 0.150), (1, 6, 0.050), (1, 7, 0.010), (1, 8, 0.100), (1, 9, 1.000),
+(2, 1, 0.200), (2, 5, 0.150), (2, 6, 0.050), (2, 7, 0.010), (2, 8, 0.100), (2, 9, 1.000),
+(3, 4, 12.000),(3, 5, 0.150), (3, 6, 0.050), (3, 7, 0.010), (3, 8, 0.100),
+(4, 10,0.200), (4, 5, 0.150), (4, 6, 0.050), (4, 7, 0.010),
+(5, 1, 0.180), (5, 5, 0.080), (5, 7, 0.020),
+(6, 3, 0.100), (6, 5, 0.050),
+(7, 11,0.250),
+(11,12,0.090), (11,5, 0.060);
+GO
+
+-- Abastecimientos
+INSERT INTO Abastecimiento (id_proveedor, fecha, estado) VALUES
+(1, DATEADD(DAY, -2, GETDATE()), 'Recibido'),
+(2, DATEADD(DAY, -1, GETDATE()), 'Recibido'),
+(1, GETDATE(),                   'Pendiente');
+GO
+
+INSERT INTO Detalle_Abastecimiento (id_abastecimiento, id_insumo, cantidad, costo_total) VALUES
+(1, 1, 25.00, 625.00),
+(1, 2, 8.00,  288.00),
+(1, 3, 10.00, 420.00),
+(1, 10,6.00,  270.00),
+(2, 5, 20.00, 80.00),
+(2, 6, 15.00, 45.00),
+(2, 7, 3.00,  36.00),
+(2, 8, 12.00, 30.00),
+(3, 1, 20.00, 500.00),
+(3, 4, 120.00,180.00);
+GO
+
+-- Reservas
+INSERT INTO Reserva (id_cliente, id_mesa, canal_reserva, fecha_reserva, hora_reserva, cant_personas, estado) VALUES
+(2, 3, 'Teléfono',   CAST(GETDATE() AS DATE),                  '20:00', 4, 'Confirmada'),
+(3, 9, 'Web',        DATEADD(DAY, 1, CAST(GETDATE() AS DATE)), '13:30', 6, 'Pendiente'),
+(4, 11,'WhatsApp',   DATEADD(DAY, 2, CAST(GETDATE() AS DATE)), '19:30', 5, 'Confirmada'),
+(1, 4, 'Presencial', CAST(GETDATE() AS DATE),                  '13:00', 4, 'Atendida');
+GO
+
+-- Pedidos
+-- monto_total = base imponible (suma de subtotales) + IGV 18%. La propina se calcula aparte.
+INSERT INTO Pedido (id_cliente, id_mesa, id_empleado, fecha_hora, tipo_comprobante, monto_total, estado_pedido) VALUES
+(1,    4, 1, GETDATE(),                   'Boleta', 363.44, 'Abierto'),  -- mesa 4 ocupada (cuenta del prototipo)
+(NULL, 6, 4, GETDATE(),                   'Boleta', 205.32, 'Abierto'),  -- mesa 6 ocupada
+(2,    1, 1, DATEADD(DAY, -1, GETDATE()), 'Boleta', 108.56, 'Cerrado');  -- pedido historico
+GO
+
+INSERT INTO Detalle_Pedido (id_pedido, id_plato, cantidad, subtotal) VALUES
+-- Pedido 1: base 308.00 | IGV 55.44 | total 363.44
+(1, 1, 1, 86.00),
+(1, 5, 1, 79.00),
+(1, 6, 1, 90.00),
+(1, 7, 1, 26.00),
+(1, 8, 1, 27.00),
+-- Pedido 2: base 174.00 | IGV 31.32 | total 205.32
+(2, 3, 1, 69.00),
+(2, 4, 1, 89.00),
+(2, 10,1, 16.00),
+-- Pedido 3: base 92.00 | IGV 16.56 | total 108.56
+(3, 9, 1, 18.00),
+(3, 11,1, 32.00),
+(3, 10,1, 16.00),
+(3, 7, 1, 26.00);
+GO
+
+-- =====================================================================
+-- USUARIO DE LA APLICACION (nivel base de datos)
+-- Se crea siempre, porque al recrear la base el usuario anterior se pierde.
+-- =====================================================================
+CREATE USER lamar_app FOR LOGIN lamar_app;
+ALTER ROLE db_datareader ADD MEMBER lamar_app;
+ALTER ROLE db_datawriter ADD MEMBER lamar_app;
+GO
+
+-- ---------------------------------------------------------------------
+-- VERIFICACION (cada consulta debe devolver lo indicado)
+-- ---------------------------------------------------------------------
+-- 1) 12 mesas, 11 platos, 4 empleados, 3 pedidos
+SELECT 'Mesa' AS tabla, COUNT(*) AS filas FROM Mesa
+UNION ALL SELECT 'Plato',    COUNT(*) FROM Plato
+UNION ALL SELECT 'Empleado', COUNT(*) FROM Empleado
+UNION ALL SELECT 'Pedido',   COUNT(*) FROM Pedido;
+
+-- 2) Roles de los empleados
+SELECT dni_empleado, nombres_empleado, cargo FROM Empleado ORDER BY id_empleado;
+
+-- 3) Una fila cada una: login (servidor) y usuario (base de datos)
+SELECT name AS login_servidor FROM master.sys.server_principals WHERE name = 'lamar_app';
+SELECT name AS usuario_base   FROM sys.database_principals     WHERE name = 'lamar_app';
+GO

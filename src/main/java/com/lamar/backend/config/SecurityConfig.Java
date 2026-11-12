@@ -54,6 +54,7 @@ public class SecurityConfig {
                     .hasAnyRole(RECEPCIONISTA, ADMIN)
                 .requestMatchers("/api/proveedores/**", "/api/insumos/**", "/api/abastecimientos/**")
                     .hasRole(ADMIN)
+                .requestMatchers("/error").permitAll()
                 .anyRequest().authenticated())
             .oauth2ResourceServer(oauth -> oauth
                 .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));
