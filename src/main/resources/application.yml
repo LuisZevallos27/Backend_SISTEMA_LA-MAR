@@ -2,7 +2,7 @@ spring:
   application:
     name: lamar-backend
   datasource:
-    url: jdbc:sqlserver://localhost:1433;databaseName=LaMarDB;encrypt=true;trustServerCertificate=true
+    url: "${DB_URL:jdbc:sqlserver://localhost:1433;databaseName=LaMarDB;encrypt=true;trustServerCertificate=true}"
     username: ${DB_USER:lamar_app}
     password: ${DB_PASSWORD}
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
@@ -15,7 +15,7 @@ spring:
     properties:
       hibernate:
         format_sql: true
-    show-sql: true
+    show-sql: ${SHOW_SQL:false}
   web:
     error:
       include-message: always
@@ -24,6 +24,8 @@ app:
   jwt:
     secret: ${JWT_SECRET}
     expiration-minutes: 480
+  cors:
+    origenes: "${CORS_ORIGENES:http://localhost:5173,http://localhost:3000}"
 
 server:
-  port: 8080
+  port: ${PORT:8080}

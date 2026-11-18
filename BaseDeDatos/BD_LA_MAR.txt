@@ -5,6 +5,8 @@
 -- Reserva.hora_reserva y Abastecimiento.estado.
 -- ATENCION: este script ELIMINA y vuelve a crear la base LaMarDB.
 -- Detener el backend antes de ejecutarlo y reiniciarlo despues.
+-- Las fechas de los datos de prueba usan la HORA DE LIMA (UTC-5), sin importar la
+-- zona horaria del servidor SQL (los contenedores de Docker suelen estar en UTC).
 -- =====================================================================
 
 USE master;
@@ -186,6 +188,21 @@ CREATE TABLE Detalle_Abastecimiento (
 );
 GO
 
+-- ---------------------------------------------------------------------
+-- 4. INDICES (consultas por fecha del dashboard y de las pantallas)
+-- ---------------------------------------------------------------------
+CREATE INDEX IX_Pedido_fecha_hora ON Pedido (fecha_hora)
+    INCLUDE (estado_pedido, monto_total, id_mesa, id_empleado, id_cliente);
+GO
+
+CREATE INDEX IX_Reserva_fecha ON Reserva (fecha_reserva)
+    INCLUDE (hora_reserva, estado, id_mesa, id_cliente);
+GO
+
+CREATE INDEX IX_DetPedido_plato ON Detalle_Pedido (id_plato)
+    INCLUDE (cantidad, subtotal);
+GO
+
 -- =====================================================================
 -- DATOS DE PRUEBA
 -- (se asume base recien creada: los IDs autoincrementales parten en 1)
@@ -212,6 +229,10 @@ GO
 INSERT INTO Empleado (dni_empleado, nombres_empleado, apellidos_empleado, cargo, turno) VALUES
 ('70123456', 'Carlos', 'Ramos Quispe',    'Mozo',          'Tarde'),
 ('71234567', 'Lucía',  'Paredes Rojas',   'Recepcionista', 'Tarde'),
+('24325562', 'Luis',  'Zevallos Chuquiviguel',   'Administrador', 'Tarde'),
+('24272138', 'Moises',  'Vilchez Aliaga',   'Administrador', 'Tarde'),
+('24209288', 'Marcos',  'Mori Barona',   'Administrador', 'Tarde'),
+('23240905', 'Anghelo',  'Lopez Castilla',   'Administrador', 'Tarde'),
 ('72345678', 'Jorge',  'Salazar Medina',  'Administrador', 'Noche'),
 ('73456789', 'Marta',  'Huamán Flores',   'Mozo',          'Noche');
 GO
@@ -221,6 +242,7 @@ INSERT INTO Cliente (dni_cliente, nombres_cliente, apellidos_cliente, telefono_c
 ('72845531', 'Anghelo', 'Lopez Castilla',  '987654321', 'anghelo.lopez@correo.com'),
 ('45678912', 'María',   'Torres Vega',     '956123478', 'maria.torres@correo.com'),
 ('40123987', 'Ricardo', 'Gamarra Diaz',    '944332211', NULL),
+('60795752', 'Francisco', 'Zevallos Aguilar',    '930455027', francisco@gmail.com),
 ('70998877', 'Sofía',   'Mendoza Luna',    '933221100', 'sofia.mendoza@correo.com');
 GO
 
@@ -276,9 +298,9 @@ GO
 
 -- Abastecimientos
 INSERT INTO Abastecimiento (id_proveedor, fecha, estado) VALUES
-(1, DATEADD(DAY, -2, GETDATE()), 'Recibido'),
-(2, DATEADD(DAY, -1, GETDATE()), 'Recibido'),
-(1, GETDATE(),                   'Pendiente');
+(1, DATEADD(DAY, -2, DATEADD(HOUR, -5, GETUTCDATE())), 'Recibido'),
+(2, DATEADD(DAY, -1, DATEADD(HOUR, -5, GETUTCDATE())), 'Recibido'),
+(1, DATEADD(HOUR, -5, GETUTCDATE()),                   'Pendiente');
 GO
 
 INSERT INTO Detalle_Abastecimiento (id_abastecimiento, id_insumo, cantidad, costo_total) VALUES
@@ -296,18 +318,18 @@ GO
 
 -- Reservas
 INSERT INTO Reserva (id_cliente, id_mesa, canal_reserva, fecha_reserva, hora_reserva, cant_personas, estado) VALUES
-(2, 3, 'Teléfono',   CAST(GETDATE() AS DATE),                  '20:00', 4, 'Confirmada'),
-(3, 9, 'Web',        DATEADD(DAY, 1, CAST(GETDATE() AS DATE)), '13:30', 6, 'Pendiente'),
-(4, 11,'WhatsApp',   DATEADD(DAY, 2, CAST(GETDATE() AS DATE)), '19:30', 5, 'Confirmada'),
-(1, 4, 'Presencial', CAST(GETDATE() AS DATE),                  '13:00', 4, 'Atendida');
+(2, 3, 'Teléfono',   CAST(DATEADD(HOUR, -5, GETUTCDATE()) AS DATE),                  '20:00', 4, 'Confirmada'),
+(3, 9, 'Web',        DATEADD(DAY, 1, CAST(DATEADD(HOUR, -5, GETUTCDATE()) AS DATE)), '13:30', 6, 'Pendiente'),
+(4, 11,'WhatsApp',   DATEADD(DAY, 2, CAST(DATEADD(HOUR, -5, GETUTCDATE()) AS DATE)), '19:30', 5, 'Confirmada'),
+(1, 4, 'Presencial', CAST(DATEADD(HOUR, -5, GETUTCDATE()) AS DATE),                  '13:00', 4, 'Atendida');
 GO
 
 -- Pedidos
 -- monto_total = base imponible (suma de subtotales) + IGV 18%. La propina se calcula aparte.
 INSERT INTO Pedido (id_cliente, id_mesa, id_empleado, fecha_hora, tipo_comprobante, monto_total, estado_pedido) VALUES
-(1,    4, 1, GETDATE(),                   'Boleta', 363.44, 'Abierto'),  -- mesa 4 ocupada (cuenta del prototipo)
-(NULL, 6, 4, GETDATE(),                   'Boleta', 205.32, 'Abierto'),  -- mesa 6 ocupada
-(2,    1, 1, DATEADD(DAY, -1, GETDATE()), 'Boleta', 108.56, 'Cerrado');  -- pedido historico
+(1,    4, 1, DATEADD(HOUR, -5, GETUTCDATE()),                   'Boleta', 363.44, 'Abierto'),  -- mesa 4 ocupada (cuenta del prototipo)
+(NULL, 6, 4, DATEADD(HOUR, -5, GETUTCDATE()),                   'Boleta', 205.32, 'Abierto'),  -- mesa 6 ocupada
+(2,    1, 1, DATEADD(DAY, -1, DATEADD(HOUR, -5, GETUTCDATE())), 'Boleta', 108.56, 'Cerrado');  -- pedido historico
 GO
 
 INSERT INTO Detalle_Pedido (id_pedido, id_plato, cantidad, subtotal) VALUES

@@ -40,24 +40,27 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(AbstractHttpConfigurer::disable)
-            .cors(Customizer.withDefaults())
-            .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
-                .requestMatchers("/api/health").permitAll()
-                .requestMatchers("/api/mesas/**", "/api/clientes/**")
-                    .hasAnyRole(MOZO, RECEPCIONISTA, ADMIN)
-                .requestMatchers("/api/platos/**", "/api/pedidos/**")
-                    .hasAnyRole(MOZO, ADMIN)
-                .requestMatchers("/api/reservas/**")
-                    .hasAnyRole(RECEPCIONISTA, ADMIN)
-                .requestMatchers("/api/proveedores/**", "/api/insumos/**", "/api/abastecimientos/**")
-                    .hasRole(ADMIN)
-                .requestMatchers("/error").permitAll()
-                .anyRequest().authenticated())
-            .oauth2ResourceServer(oauth -> oauth
-                .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));
+                .csrf(AbstractHttpConfigurer::disable)
+                .cors(Customizer.withDefaults())
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
+                        .requestMatchers("/api/health").permitAll()
+                        .requestMatchers("/api/mesas/**", "/api/clientes/**")
+                        .hasAnyRole(MOZO, RECEPCIONISTA, ADMIN)
+                        .requestMatchers("/api/platos/**", "/api/pedidos/**")
+                        .hasAnyRole(MOZO, ADMIN)
+                        .requestMatchers("/api/reservas/**")
+                        .hasAnyRole(RECEPCIONISTA, ADMIN)
+                        .requestMatchers("/api/proveedores/**", "/api/insumos/**", "/api/abastecimientos/**")
+                        .hasRole(ADMIN)
+                        .requestMatchers("/api/proveedores/**", "/api/insumos/**", "/api/abastecimientos/**",
+                                "/api/dashboard/**")
+                        .hasRole(ADMIN)
+                        .requestMatchers("/error").permitAll()
+                        .anyRequest().authenticated())
+                .oauth2ResourceServer(oauth -> oauth
+                        .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));
         return http.build();
     }
 
@@ -78,9 +81,9 @@ public class SecurityConfig {
     }
 
     @Bean
-    CorsConfigurationSource corsConfigurationSource() {
+    CorsConfigurationSource corsConfigurationSource(@Value("${app.cors.origenes}") List<String> origenes) {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:3000"));
+        config.setAllowedOrigins(origenes.stream().map(String::trim).filter(o -> !o.isEmpty()).toList());
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
