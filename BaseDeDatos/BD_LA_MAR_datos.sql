@@ -1,4 +1,4 @@
-﻿-- =====================================================================
+-- =====================================================================
 -- PROYECTO FINAL BASE DE DATOS II - GRUPO 02 - LA MAR CEVICHERIA
 -- DATOS DE EJEMPLO (SEGUNDO SCRIPT)
 --
@@ -22,23 +22,9 @@ GO
 SET NOCOUNT ON;
 SET XACT_ABORT ON;
 
--- Guarda: solo se ejecuta sobre la base recien creada por BD_LA_MAR.txt
-IF NOT (
-        (SELECT COUNT(*) FROM Mesa)           = 12 AND (SELECT ISNULL(MAX(id_mesa), 0)           FROM Mesa)           = 12
-    AND (SELECT COUNT(*) FROM Empleado)       = 4  AND (SELECT ISNULL(MAX(id_empleado), 0)       FROM Empleado)       = 4
-    AND (SELECT COUNT(*) FROM Cliente)        = 4  AND (SELECT ISNULL(MAX(id_cliente), 0)        FROM Cliente)        = 4
-    AND (SELECT COUNT(*) FROM Proveedor)      = 3  AND (SELECT ISNULL(MAX(id_proveedor), 0)      FROM Proveedor)      = 3
-    AND (SELECT COUNT(*) FROM Plato)          = 11 AND (SELECT ISNULL(MAX(id_plato), 0)          FROM Plato)          = 11
-    AND (SELECT COUNT(*) FROM Insumo)         = 12 AND (SELECT ISNULL(MAX(id_insumo), 0)         FROM Insumo)         = 12
-    AND (SELECT COUNT(*) FROM Reserva)        = 4  AND (SELECT ISNULL(MAX(id_reserva), 0)        FROM Reserva)        = 4
-    AND (SELECT COUNT(*) FROM Pedido)         = 3  AND (SELECT ISNULL(MAX(id_pedido), 0)         FROM Pedido)         = 3
-    AND (SELECT COUNT(*) FROM Abastecimiento) = 3  AND (SELECT ISNULL(MAX(id_abastecimiento), 0) FROM Abastecimiento) = 3
-)
-BEGIN
-    PRINT 'NO SE CARGARON DATOS: la base no esta en su estado inicial.';
-    PRINT 'Ejecuta primero BD_LA_MAR.txt (recrea la base) y luego este script, una sola vez.';
-    RETURN;
-END
+-- Limpia una posible configuracion residual de una ejecucion anterior
+-- en esta misma conexion de SSMS.
+SET IDENTITY_INSERT dbo.Empleado OFF;
 
 -- Hora de Lima (UTC-5, sin horario de verano), sin depender de la zona horaria del servidor SQL
 DECLARE @ahora DATETIME = DATEADD(HOUR, -5, GETUTCDATE());
@@ -47,26 +33,24 @@ DECLARE @hoyd  DATE     = CAST(@ahora AS DATE);
 
 BEGIN TRANSACTION;
 
--- Mesas nuevas (13 a 18)
-SET IDENTITY_INSERT Mesa ON;
-INSERT INTO Mesa (id_mesa, numero_mesa, zona_mesa, capacidad, estado) VALUES
-    (13, 13, 'Piso 1', 4, 'Disponible'),
-    (14, 14, 'Piso 1', 6, 'Disponible'),
-    (15, 15, 'Piso 2', 2, 'Disponible'),
-    (16, 16, 'Piso 2', 8, 'Disponible'),
-    (17, 17, 'VIP', 8, 'Disponible'),
-    (18, 18, 'VIP', 12, 'Disponible');
-SET IDENTITY_INSERT Mesa OFF;
+-- Mesas nuevas (los IDs 13 a 18 se generan automaticamente).
+INSERT INTO Mesa (numero_mesa, zona_mesa, capacidad, estado) VALUES
+    (13, 'Piso 1', 4, 'Disponible'),
+    (14, 'Piso 1', 6, 'Disponible'),
+    (15, 'Piso 2', 2, 'Disponible'),
+    (16, 'Piso 2', 8, 'Disponible'),
+    (17, 'VIP', 8, 'Disponible'),
+    (18, 'VIP', 12, 'Disponible');
 
 -- Empleados nuevos: 5 mozos y 1 recepcionista (password_empleado lo genera el backend)
 SET IDENTITY_INSERT Empleado ON;
 INSERT INTO Empleado (id_empleado, dni_empleado, nombres_empleado, apellidos_empleado, cargo, turno) VALUES
-    (5, '74125896', 'Diego', 'Torres Villanueva', 'Mozo', 'Mañana'),
-    (6, '75236974', 'Valeria', 'Castillo Núñez', 'Mozo', 'Tarde'),
-    (7, '76341852', 'Renzo', 'Mendoza Aguilar', 'Mozo', 'Noche'),
-    (8, '77452963', 'Camila', 'Rojas Delgado', 'Mozo', 'Tarde'),
-    (9, '78563074', 'Andrés', 'Vargas Chávez', 'Mozo', 'Mañana'),
-    (10, '79674185', 'Daniela', 'Fernández Ortiz', 'Recepcionista', 'Mañana');
+    (8, '74125896', 'Diego', 'Torres Villanueva', 'Mozo', 'Mañana'),
+    (9, '75236974', 'Valeria', 'Castillo Núñez', 'Mozo', 'Tarde'),
+    (10, '76341852', 'Renzo', 'Mendoza Aguilar', 'Mozo', 'Noche'),
+    (11, '77452963', 'Camila', 'Rojas Delgado', 'Mozo', 'Tarde'),
+    (12, '78563074', 'Andrés', 'Vargas Chávez', 'Mozo', 'Mañana'),
+    (13, '79674185', 'Daniela', 'Fernández Ortiz', 'Recepcionista', 'Mañana');
 SET IDENTITY_INSERT Empleado OFF;
 
 -- Clientes: personas (DNI de 8 digitos) y empresas (RUC de 11 digitos; razon social en nombres, tipo en apellidos)

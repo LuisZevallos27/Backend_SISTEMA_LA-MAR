@@ -1,4 +1,4 @@
-﻿-- =====================================================================
+-- =====================================================================
 -- PROYECTO FINAL BASE DE DATOS II - GRUPO 02 - LA MAR CEVICHERIA
 -- Parte relacional (SQL Server) - Modelo 3FN
 -- Version con roles de empleado (Mozo, Recepcionista, Administrador),
@@ -224,17 +224,16 @@ INSERT INTO Mesa (numero_mesa, zona_mesa, capacidad, estado) VALUES
 (12, 'VIP',    10,'Disponible');
 GO
 
--- Empleados: 2 mozos, 1 recepcionista, 1 administrador
+-- Empleados iniciales: 2 mozos, 1 recepcionista y 1 administrador.
 -- (password_empleado se completa desde el backend: contrasena inicial = DNI)
 INSERT INTO Empleado (dni_empleado, nombres_empleado, apellidos_empleado, cargo, turno) VALUES
-('70123456', 'Carlos', 'Ramos Quispe',    'Mozo',          'Tarde'),
-('71234567', 'Lucía',  'Paredes Rojas',   'Recepcionista', 'Tarde'),
-('24325562', 'Luis',  'Zevallos Chuquiviguel',   'Administrador', 'Tarde'),
+('70123456', 'Carlos', 'Ramos Quispe', 'Mozo', 'Tarde'),
+('71234567', 'Lucía', 'Paredes Rojas', 'Recepcionista', 'Tarde'),
+('24325562', 'Luis', 'Zevallos Chuquiviguel', 'Administrador', 'Tarde'),
 ('24272138', 'Moises',  'Vilchez Aliaga',   'Administrador', 'Tarde'),
 ('24209288', 'Marcos',  'Mori Barona',   'Administrador', 'Tarde'),
 ('23240905', 'Anghelo',  'Lopez Castilla',   'Administrador', 'Tarde'),
-('72345678', 'Jorge',  'Salazar Medina',  'Administrador', 'Noche'),
-('73456789', 'Marta',  'Huamán Flores',   'Mozo',          'Noche');
+('73456789', 'Marta', 'Huamán Flores', 'Mozo', 'Noche');
 GO
 
 -- Clientes
@@ -242,8 +241,7 @@ INSERT INTO Cliente (dni_cliente, nombres_cliente, apellidos_cliente, telefono_c
 ('72845531', 'Anghelo', 'Lopez Castilla',  '987654321', 'anghelo.lopez@correo.com'),
 ('45678912', 'María',   'Torres Vega',     '956123478', 'maria.torres@correo.com'),
 ('40123987', 'Ricardo', 'Gamarra Diaz',    '944332211', NULL),
-('60795752', 'Francisco', 'Zevallos Aguilar',    '930455027', 'francisco@gmail.com'),
-('70998877', 'Sofía',   'Mendoza Luna',    '933221100', 'sofia.mendoza@correo.com');
+('60795752', 'Francisco', 'Zevallos Aguilar', '930455027', 'francisco@gmail.com');
 GO
 
 -- Platos (precios SIN IGV; el IGV 18% se calcula en la pre-cuenta)
