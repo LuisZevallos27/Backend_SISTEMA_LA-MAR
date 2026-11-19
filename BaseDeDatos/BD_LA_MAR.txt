@@ -242,7 +242,7 @@ INSERT INTO Cliente (dni_cliente, nombres_cliente, apellidos_cliente, telefono_c
 ('72845531', 'Anghelo', 'Lopez Castilla',  '987654321', 'anghelo.lopez@correo.com'),
 ('45678912', 'María',   'Torres Vega',     '956123478', 'maria.torres@correo.com'),
 ('40123987', 'Ricardo', 'Gamarra Diaz',    '944332211', NULL),
-('60795752', 'Francisco', 'Zevallos Aguilar',    '930455027', francisco@gmail.com),
+('60795752', 'Francisco', 'Zevallos Aguilar',    '930455027', 'francisco@gmail.com'),
 ('70998877', 'Sofía',   'Mendoza Luna',    '933221100', 'sofia.mendoza@correo.com');
 GO
 

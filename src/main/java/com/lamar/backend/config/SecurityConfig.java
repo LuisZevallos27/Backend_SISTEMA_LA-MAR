@@ -33,7 +33,7 @@ import com.nimbusds.jose.jwk.source.ImmutableSecret;
 
 @Configuration
 @EnableWebSecurity
-public class test {
+public class SecurityConfig {
 
     // Deben coincidir exactamente con Empleado.cargo en la base de datos
     private static final String MOZO = "Mozo";
