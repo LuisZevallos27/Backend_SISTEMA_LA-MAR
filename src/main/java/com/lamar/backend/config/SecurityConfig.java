@@ -60,6 +60,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/proveedores/**", "/api/insumos/**", "/api/abastecimientos/**",
                                 "/api/dashboard/**")
                         .hasRole(ADMIN)
+                        // --- Encuestas (MongoDB) ---
+                        .requestMatchers(HttpMethod.GET, "/api/encuestas/pedido/*").hasAnyRole(MOZO, ADMIN)
+                        .requestMatchers(HttpMethod.POST, "/api/encuestas").hasAnyRole(MOZO, ADMIN)
+                        .requestMatchers("/api/encuestas/**").hasRole(ADMIN)
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth -> oauth
