@@ -15,4 +15,11 @@ public interface PedidoRepository extends JpaRepository<Pedido, Integer> {
      */
     @Query("select p from Pedido p join fetch p.mesa join fetch p.empleado where p.id = :id")
     Optional<Pedido> buscarConMesaYEmpleado(@Param("id") Integer id);
+
+    /**
+     * Carga el pedido con sus platos (detalle) en una sola consulta (sin lazy
+     * loading).
+     */
+    @Query("select distinct p from Pedido p left join fetch p.detalles d left join fetch d.plato where p.id = :id")
+    Optional<Pedido> buscarConPlatos(@Param("id") Integer id);
 }

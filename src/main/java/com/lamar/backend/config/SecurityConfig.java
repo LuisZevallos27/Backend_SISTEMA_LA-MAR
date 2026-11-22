@@ -64,6 +64,12 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/encuestas/pedido/*").hasAnyRole(MOZO, ADMIN)
                         .requestMatchers(HttpMethod.POST, "/api/encuestas").hasAnyRole(MOZO, ADMIN)
                         .requestMatchers("/api/encuestas/**").hasRole(ADMIN)
+                        // --- Reseñas (MongoDB) ---
+                        .requestMatchers(HttpMethod.POST, "/api/resenas").hasAnyRole(MOZO, ADMIN)
+                        .requestMatchers(HttpMethod.GET, "/api/resenas/pedido/*", "/api/resenas/plato/*",
+                                "/api/resenas/promedios")
+                        .hasAnyRole(MOZO, ADMIN)
+                        .requestMatchers("/api/resenas/**").hasRole(ADMIN)
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth -> oauth

@@ -21,6 +21,7 @@ spring:
   web:
     error:
       include-message: always
+      include-stacktrace: never
 
 app:
   jwt:
