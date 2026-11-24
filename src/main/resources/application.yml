@@ -2,7 +2,7 @@ spring:
   application:
     name: lamar-backend
   datasource:
-    url: "${DB_URL}"
+    url: "jdbc:sqlserver://localhost:1433;databaseName=LaMarDB;encrypt=true;trustServerCertificate=true"
     username: ${DB_USER}
     password: ${DB_PASSWORD}
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
