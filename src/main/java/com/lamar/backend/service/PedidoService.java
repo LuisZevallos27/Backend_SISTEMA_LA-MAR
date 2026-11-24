@@ -56,19 +56,19 @@ public class PedidoService {
         if (req.dniCliente() != null && !req.dniCliente().isBlank()) {
             p.setCliente(buscarCliente(req.dniCliente()));
         }
-        // Si la mesa tiene una reserva activa de hoy y el pedido se abre entre 30
-        // minutos antes
-        // y 2 horas despues de su hora, se marca atendida y se toma su cliente
-                LocalTime ahora = LocalTime.now();
-        reservaRepository.findByMesaIdAndFechaAndEstadoIn(mesa.getId(), LocalDate.now(), RESERVAS_ACTIVAS)
-                .stream()
-                .filter(r -> {
-                    if (r.getHora() == null) return true;
-                    // minutos hasta la reserva (negativo si ya paso su hora)
-                    long min = Duration.between(ahora, r.getHora()).toMinutes();
-                    return min <= 30 && min >= -120;
-                })
-                .min(Comparator.comparing(Reserva::getHora, Comparator.nullsFirst(Comparator.naturalOrder())))
+        // Si la mesa tiene una reserva de hoy que corresponde a este pedido (se abre
+        // entre 30 minutos
+        // antes y 2 horas despues de su hora), se marca atendida y se toma su cliente.
+        // Cuenta tambien una reserva que Recepcion ya marco "Atendida" a mano, mientras
+        // ningun
+        // pedido la haya usado (ver ReservaDelPedido).
+        LocalDate hoy = LocalDate.now();
+        ReservaDelPedido.elegir(
+                reservaRepository.findByMesaIdAndFechaAndEstadoIn(mesa.getId(), hoy, RESERVAS_ACTIVAS),
+                reservaRepository.findByMesaIdAndFechaAndEstadoIn(mesa.getId(), hoy, List.of("Atendida")),
+                LocalTime.now(),
+                r -> pedidoRepository.existsByMesaIdAndFechaHoraGreaterThanEqualAndEstadoPedidoNot(
+                        mesa.getId(), ReservaDelPedido.inicioDeLaVentana(hoy, r), ANULADO))
                 .ifPresent(r -> {
                     r.setEstado("Atendida");
                     if (p.getCliente() == null) {

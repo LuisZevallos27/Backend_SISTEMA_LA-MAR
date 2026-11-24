@@ -1,0 +1,17 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "LaMar Backend",
+      "request": "launch",
+      "mainClass": "com.lamar.backend.BackendApplication",
+      "env": {
+        "DB_USER": "lamar_app",
+        "DB_PASSWORD": "CambiaEsto#2026",
+        "JWT_SECRET": "1pUWXxWayrI0KKFzHz/qZkO5iodDz58vxqncPY9roVYOgUfEM06dzg7EnNcrqUey",
+        "MONGO_URI": "mongodb://lamar_app:LaMarMongo2026@localhost:27017/LaMarFeedback?authSource=LaMarFeedback&serverSelectionTimeoutMS=3000&connectTimeoutMS=3000"
+      }
+    }
+  ]
+}
