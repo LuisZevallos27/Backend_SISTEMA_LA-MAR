@@ -2,12 +2,12 @@ spring:
   application:
     name: lamar-backend
   datasource:
-    url: "${DB_URL:jdbc:sqlserver://localhost:1433;databaseName=LaMarDB;encrypt=true;trustServerCertificate=true}"
-    username: ${DB_USER:lamar_app}
+    url: "${DB_URL}"
+    username: ${DB_USER}
     password: ${DB_PASSWORD}
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
   mongodb:
-    uri: "${MONGO_URI:mongodb://localhost:27017/LaMarFeedback?serverSelectionTimeoutMS=3000&connectTimeoutMS=3000}"
+    uri: "${MONGO_URI}"
   jpa:
     open-in-view: false
     hibernate:
@@ -17,7 +17,7 @@ spring:
     properties:
       hibernate:
         format_sql: true
-    show-sql: ${SHOW_SQL:false}
+    show-sql: false
   web:
     error:
       include-message: always
@@ -28,7 +28,7 @@ app:
     secret: ${JWT_SECRET}
     expiration-minutes: 480
   cors:
-    origenes: "${CORS_ORIGENES:http://localhost:5173,http://localhost:3000}"
+    origenes: "http://localhost:5173,http://localhost:3000"
 
 server:
-  port: ${PORT:8080}
+  port: "8080"
